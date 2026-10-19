@@ -1,17 +1,12 @@
-import './styles.css';
 import { lessons } from './data/lessons.js';
 import { createPythonRunner } from './runner.js';
 
 const app = document.querySelector('#app');
 const STORAGE_KEY = 'python-practice-progress-v1';
-const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
 const defaultProgress = () => ({ opened: [], read: [], solved: {}, attempts: {}, failures: {}, inputTried: [] });
 
 function appUrl(path = '/') {
-  let route = path;
-  if (BASE_PATH && route.startsWith(BASE_PATH)) route = route.slice(BASE_PATH.length) || '/';
-  if (!route.startsWith('/')) route = `/${route}`;
-  return `${BASE_PATH}${route}` || '/';
+  return path.startsWith('/') ? path : `/${path}`;
 }
 
 const pendingRoute = sessionStorage.getItem('python-practice-gh-pages-route');
@@ -49,8 +44,7 @@ function lessonById(id) {
 }
 
 function routeInfo() {
-  let pathname = window.location.pathname;
-  if (BASE_PATH && pathname.startsWith(BASE_PATH)) pathname = pathname.slice(BASE_PATH.length) || '/';
+  const pathname = window.location.pathname;
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/intro') return { page: 'intro' };
   const match = path.match(/^\/lesson\/(\d+)(\/practice)?$/);
@@ -368,6 +362,7 @@ function handleRunnerEvent(event) {
   if (event.type === 'load-error') {
     state.pyStatus = 'failed';
     state.consoleParts = [{ text: "Python couldn't load. Check your internet connection and refresh the page.", kind: 'text' }];
+    state.consoleError = event.message ? { friendly: "Python couldn't load.", original: event.message } : null;
     renderConsole();
   }
   if (event.type === 'output') appendConsole(event.text, 'text');

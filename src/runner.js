@@ -10,7 +10,7 @@ export function createPythonRunner(onEvent) {
   function spawnWorker() {
     status = 'loading';
     onEvent({ type: 'loading' });
-    worker = new Worker(`${import.meta.env.BASE_URL}python-worker.js`);
+    worker = new Worker('/python-worker.js');
     worker.onmessage = ({ data }) => {
       if (data.type === 'ready') {
         status = 'ready';
@@ -19,7 +19,7 @@ export function createPythonRunner(onEvent) {
       }
       if (data.type === 'load-error') {
         status = 'failed';
-        onEvent({ type: 'load-error' });
+        onEvent({ type: 'load-error', message: data.message });
         return;
       }
       if (!active) return;
@@ -30,10 +30,10 @@ export function createPythonRunner(onEvent) {
       }
       if (data.type === 'done' || data.type === 'error') finish(data);
     };
-    worker.onerror = () => {
-      if (active) finish({ type: 'error', message: 'The Python worker stopped unexpectedly.' });
+    worker.onerror = (event) => {
+      if (active) finish({ type: 'error', message: event.message || 'The Python worker stopped unexpectedly.' });
       status = 'failed';
-      onEvent({ type: 'load-error' });
+      onEvent({ type: 'load-error', message: event.message });
     };
   }
 

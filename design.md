@@ -1,4 +1,4 @@
-Build a beginner-friendly Python learning website as a React + Vite + Tailwind single-page app with no backend. All progress is stored in localStorage.
+Build a beginner-friendly Python learning website as a static HTML, CSS, and JavaScript single-page app with Tailwind CSS and no backend. Serve it directly from Vercel without a frontend build step. All progress is stored in localStorage.
 
 LEARNING OUTCOME
 By the end, a learner can write and run small programs that use variables, if/else decisions, match, loops, and lists, can use input() to get answers from the user, and can read the error messages that help them fix mistakes.
@@ -31,7 +31,7 @@ input() must behave like a terminal prompt, not a custom form:
 - When the program calls input("prompt"), the console prints the prompt text on its own line, then shows a single blinking text cursor on the same line, like a terminal.
 - The learner types the answer directly into the console and presses Enter. The typed text stays in the console history, and the program continues from that exact value.
 - input() always returns a string, exactly as in real Python. Lessons convert with int() when they need numbers.
-- Implementation: the worker and the main thread share a SharedArrayBuffer and use Atomics.wait in the worker to block until the answer arrives. The main thread writes the answer and calls Atomics.notify. Set the Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp headers in the Vite dev server config, and add a check that window.crossOriginIsolated is true.
+- Implementation: the worker and the main thread share a SharedArrayBuffer and use Atomics.wait in the worker to block until the answer arrives. The main thread writes the answer and calls Atomics.notify. Set the Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp headers in Vercel and the local static server, and add a check that window.crossOriginIsolated is true.
 - If window.crossOriginIsolated is false, the console shows: "Interactive input isn't available in this browser. Try a different browser or refresh the page." The "Try with input" button is disabled in that case. All other features still work.
 - If the learner closes the lesson or resets while input is waiting, terminate the worker cleanly.
 - Ctrl/Cmd+C in the console stops a running program (same as the timeout behavior: terminate the worker and restart it).

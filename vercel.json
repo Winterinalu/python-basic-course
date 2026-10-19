@@ -1,7 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/intro",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/lesson/:path*",
       "destination": "/index.html"
     }
   ],

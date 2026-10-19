@@ -4,7 +4,22 @@ import { createPythonRunner } from './runner.js';
 
 const app = document.querySelector('#app');
 const STORAGE_KEY = 'python-practice-progress-v1';
+const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
 const defaultProgress = () => ({ opened: [], read: [], solved: {}, attempts: {}, failures: {}, inputTried: [] });
+
+function appUrl(path = '/') {
+  let route = path;
+  if (BASE_PATH && route.startsWith(BASE_PATH)) route = route.slice(BASE_PATH.length) || '/';
+  if (!route.startsWith('/')) route = `/${route}`;
+  return `${BASE_PATH}${route}` || '/';
+}
+
+const pendingRoute = sessionStorage.getItem('python-practice-gh-pages-route');
+if (pendingRoute) {
+  sessionStorage.removeItem('python-practice-gh-pages-route');
+  history.replaceState({}, '', appUrl(pendingRoute));
+}
+
 const state = {
   progress: loadProgress(),
   consoleParts: [],
@@ -34,7 +49,9 @@ function lessonById(id) {
 }
 
 function routeInfo() {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  let pathname = window.location.pathname;
+  if (BASE_PATH && pathname.startsWith(BASE_PATH)) pathname = pathname.slice(BASE_PATH.length) || '/';
+  const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/intro') return { page: 'intro' };
   const match = path.match(/^\/lesson\/(\d+)(\/practice)?$/);
   if (match) return { page: match[2] ? 'practice' : 'lesson', id: Number(match[1]) };
@@ -82,9 +99,9 @@ function readLesson(lesson) {
 
 function headerMarkup() {
   return `<header class="site-header">
-    <a class="brand" href="/" data-nav aria-label="Python Practice home"><span class="brand-mark">Py</span><span>Python Practice</span></a>
+    <a class="brand" href="${appUrl('/')}" data-nav aria-label="Python Practice home"><span class="brand-mark">Py</span><span>Python Practice</span></a>
     <nav class="header-actions" aria-label="Main navigation">
-      <a class="quiet-link" href="/intro" data-nav>How to use this site</a>
+      <a class="quiet-link" href="${appUrl('/intro')}" data-nav>How to use this site</a>
       <button class="button button-quiet theme-toggle" type="button" data-action="theme">${document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode'}</button>
     </nav>
   </header>`;
@@ -120,7 +137,7 @@ function progressBar(lesson) {
 function homeMarkup() {
   return `<main class="page-wrap home-page">
     <section class="welcome-row"><div><p class="eyebrow">Your first steps in Python</p><h1>Learn by making<br><span>something work.</span></h1><p class="welcome-copy">A calm, hands-on path from your first variable to a tiny bank system.</p></div><div class="welcome-stamp" aria-hidden="true"><span>01</span><small>learn<br>by doing</small></div></section>
-    <a class="intro-card" href="/intro" data-nav><span class="intro-icon" aria-hidden="true">↗</span><span><strong>How to use this site</strong><small>A quick guide to the editor, console, and practice.</small></span><span class="card-arrow" aria-hidden="true">→</span></a>
+    <a class="intro-card" href="${appUrl('/intro')}" data-nav><span class="intro-icon" aria-hidden="true">↗</span><span><strong>How to use this site</strong><small>A quick guide to the editor, console, and practice.</small></span><span class="card-arrow" aria-hidden="true">→</span></a>
     <div class="section-heading"><div><p class="eyebrow">The learning path</p><h2>Seven lessons, one step at a time</h2></div><span class="path-count">01 — 07</span></div>
     <section class="lesson-list" aria-label="Lessons">${lessons.map((lesson) => {
       const progress = progressLabel(lesson);
@@ -129,7 +146,7 @@ function homeMarkup() {
         <div class="lesson-number">${String(lesson.id).padStart(2, '0')}</div>
         <div class="lesson-summary"><p class="eyebrow">${lesson.id === 7 ? 'Capstone' : `Lesson ${lesson.id}`}</p><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.description)}</p></div>
         <div class="lesson-progress">${progressBar(lesson)}</div>
-        <a class="button ${progress.complete ? 'button-outline' : 'button-primary'} lesson-start" href="/lesson/${lesson.id}" data-nav>${started ? 'Continue' : 'Start'} <span aria-hidden="true">→</span></a>
+        <a class="button ${progress.complete ? 'button-outline' : 'button-primary'} lesson-start" href="${appUrl(`/lesson/${lesson.id}`)}" data-nav>${started ? 'Continue' : 'Start'} <span aria-hidden="true">→</span></a>
       </article>`;
     }).join('')}</section>
   </main>`;
@@ -143,9 +160,9 @@ function introMarkup() {
     ['04', 'Try the practice', 'Solve one problem at a time. Check my answer compares what your code prints with the expected result.'],
     ['05', 'Ask for help', 'Use Help me for a simpler explanation, a deeper example, or a quick answer about the current lesson.'],
   ];
-  return `<main class="page-wrap narrow-page intro-page"><a class="back-link" href="/" data-nav>← All lessons</a><p class="eyebrow">Before you begin</p><h1>How to use this site</h1><p class="page-lead">You can learn at your own pace. Try things, read what Python says, and adjust your code.</p>
+  return `<main class="page-wrap narrow-page intro-page"><a class="back-link" href="${appUrl('/')}" data-nav>← All lessons</a><p class="eyebrow">Before you begin</p><h1>How to use this site</h1><p class="page-lead">You can learn at your own pace. Try things, read what Python says, and adjust your code.</p>
     <ol class="intro-steps">${steps.map(([number, title, body]) => `<li><span class="step-number">${number}</span><div><h2>${title}</h2><p>${body}</p></div></li>`).join('')}</ol>
-    <a class="button button-primary intro-start" href="/lesson/1" data-nav>Start Lesson 1 <span aria-hidden="true">→</span></a>
+    <a class="button button-primary intro-start" href="${appUrl('/lesson/1')}" data-nav>Start Lesson 1 <span aria-hidden="true">→</span></a>
   </main>`;
 }
 
@@ -170,15 +187,15 @@ function lessonMarkup(lesson) {
   const inputUnavailable = !window.crossOriginIsolated;
   const mobileTabs = `<div class="mobile-tabs" role="tablist" aria-label="Lesson panels">${[['lesson', 'Lesson'], ['code', 'Code'], ['console', 'Console']].map(([panel, label]) => `<button type="button" role="tab" aria-selected="${state.mobilePanel === panel}" class="mobile-tab ${state.mobilePanel === panel ? 'is-active' : ''}" data-action="mobile-tab" data-panel="${panel}">${label}</button>`).join('')}</div>`;
   return `<main class="page-wrap lesson-page">
-    <a class="back-link" href="/" data-nav>← All lessons</a>
-    <div class="lesson-title-row"><div><p class="eyebrow">Lesson ${lesson.id} of 7</p><h1>${escapeHtml(lesson.title)}</h1><p class="page-lead">${escapeHtml(lesson.description)}</p></div><a class="button button-outline practice-shortcut" href="/lesson/${lesson.id}/practice" data-nav>Go to practice <span aria-hidden="true">→</span></a></div>
+    <a class="back-link" href="${appUrl('/')}" data-nav>← All lessons</a>
+    <div class="lesson-title-row"><div><p class="eyebrow">Lesson ${lesson.id} of 7</p><h1>${escapeHtml(lesson.title)}</h1><p class="page-lead">${escapeHtml(lesson.description)}</p></div><a class="button button-outline practice-shortcut" href="${appUrl(`/lesson/${lesson.id}/practice`)}" data-nav>Go to practice <span aria-hidden="true">→</span></a></div>
     ${mobileTabs}
     <div class="lesson-panels">
-      <section class="panel theory-panel ${state.mobilePanel === 'lesson' ? 'mobile-active' : ''}" data-mobile-panel="lesson" aria-label="Lesson explanation"><div class="panel-heading"><span class="panel-index">01</span><h2>Understand it</h2></div><div class="lesson-sections">${lesson.sections.map((section) => `<section><h3>${escapeHtml(section.heading)}</h3><p>${escapeHtml(section.body)}</p></section>`).join('')}</div><aside class="key-points"><h3>Key points</h3><ul>${lesson.keyPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul></aside><a class="button button-primary full-button" href="/lesson/${lesson.id}/practice" data-nav>Go to practice <span aria-hidden="true">→</span></a></section>
+      <section class="panel theory-panel ${state.mobilePanel === 'lesson' ? 'mobile-active' : ''}" data-mobile-panel="lesson" aria-label="Lesson explanation"><div class="panel-heading"><span class="panel-index">01</span><h2>Understand it</h2></div><div class="lesson-sections">${lesson.sections.map((section) => `<section><h3>${escapeHtml(section.heading)}</h3><p>${escapeHtml(section.body)}</p></section>`).join('')}</div><aside class="key-points"><h3>Key points</h3><ul>${lesson.keyPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul></aside><a class="button button-primary full-button" href="${appUrl(`/lesson/${lesson.id}/practice`)}" data-nav>Go to practice <span aria-hidden="true">→</span></a></section>
       <section class="panel editor-panel ${state.mobilePanel === 'code' ? 'mobile-active' : ''}" data-mobile-panel="code" aria-label="Python code editor"><div class="panel-heading"><span class="panel-index">02</span><h2>Make it yours</h2></div><div class="editor-caption"><span>example.py</span><span>Python 3</span></div>${editorMarkup('lesson-editor', lesson.exampleCode, 'Python code')}<div class="editor-actions"><button class="button button-primary" type="button" data-action="lesson-run" ${state.pyStatus !== 'ready' ? 'disabled' : ''}>Run <span aria-hidden="true">▶</span></button><button class="button button-outline" type="button" data-action="lesson-reset">Reset</button><button class="button button-outline input-button" type="button" data-action="lesson-input" ${inputUnavailable || state.pyStatus !== 'ready' ? 'disabled' : ''}>Try with input</button></div><p class="editor-note">${escapeHtml(lesson.inputDemoNote)}</p></section>
       <section class="panel console-panel ${state.mobilePanel === 'console' ? 'mobile-active' : ''}" data-mobile-panel="console" aria-label="Python console"><div class="panel-heading"><span class="panel-index">03</span><h2>See what happens</h2></div>${consoleMarkup('lesson-console')}</section>
     </div>
-    <nav class="lesson-nav" aria-label="Lesson navigation">${lesson.id > 1 ? `<a class="button button-outline" href="/lesson/${lesson.id - 1}" data-nav>← Previous lesson</a>` : '<span></span>'}${lesson.id < 7 ? `<a class="button button-outline" href="/lesson/${lesson.id + 1}" data-nav>Next lesson →</a>` : '<a class="button button-primary" href="/lesson/7/practice" data-nav>Final challenge →</a>'}</nav>
+    <nav class="lesson-nav" aria-label="Lesson navigation">${lesson.id > 1 ? `<a class="button button-outline" href="${appUrl(`/lesson/${lesson.id - 1}`)}" data-nav>← Previous lesson</a>` : '<span></span>'}${lesson.id < 7 ? `<a class="button button-outline" href="${appUrl(`/lesson/${lesson.id + 1}`)}" data-nav>Next lesson →</a>` : `<a class="button button-primary" href="${appUrl('/lesson/7/practice')}" data-nav>Final challenge →</a>`}</nav>
   </main>`;
 }
 
@@ -203,7 +220,7 @@ function practiceMarkup(lesson) {
   const hintIndex = state.hintIndex || 0;
   const hintContent = hintIndex ? `<aside class="hint-box"><span class="hint-kicker">Hint ${hintIndex} of 2</span><p>${escapeHtml(problem.hints[hintIndex - 1])}</p></aside>` : '';
   const result = state.practiceResult?.index === index ? practiceFeedbackMarkup(state.practiceResult) : '';
-  return `<main class="page-wrap practice-page"><a class="back-link" href="/lesson/${lesson.id}" data-nav>← Back to lesson</a><div class="practice-heading"><div><p class="eyebrow">${lesson.id === 7 ? 'Course challenge' : `Lesson ${lesson.id} practice`}</p><h1>${escapeHtml(lesson.title)}</h1></div><div class="problem-count"><strong>Problem ${index + 1} of ${total}</strong><span>${solved.length} solved</span></div></div>
+  return `<main class="page-wrap practice-page"><a class="back-link" href="${appUrl(`/lesson/${lesson.id}`)}" data-nav>← Back to lesson</a><div class="practice-heading"><div><p class="eyebrow">${lesson.id === 7 ? 'Course challenge' : `Lesson ${lesson.id} practice`}</p><h1>${escapeHtml(lesson.title)}</h1></div><div class="problem-count"><strong>Problem ${index + 1} of ${total}</strong><span>${solved.length} solved</span></div></div>
     <div class="practice-layout"><section class="panel practice-editor-panel"><div class="panel-heading"><span class="panel-index">${String(index + 1).padStart(2, '0')}</span><h2>Try it yourself</h2></div><p class="problem-prompt">${escapeHtml(problem.prompt)}</p><div class="editor-caption"><span>answer.py</span><span>Attempt ${attempts}</span></div>${editorMarkup('practice-editor', problem.starterCode, 'Your Python answer')}<div class="practice-actions"><button class="button button-primary" type="button" data-action="practice-check" ${state.pyStatus !== 'ready' ? 'disabled' : ''}>Check my answer</button><button class="button button-outline" type="button" data-action="practice-hint" ${hintIndex >= 2 ? 'disabled' : ''}>Hint${hintIndex ? ` (${hintIndex}/2)` : ''}</button><button class="button button-outline" type="button" data-action="practice-solution" ${failures < 2 ? 'disabled' : ''}>Show solution</button></div>${hintContent}<div id="practice-feedback" aria-live="polite">${result}</div>${state.showSolution ? `<aside class="solution-box"><h3>One solution</h3><pre><code>${escapeHtml(problem.solution)}</code></pre></aside>` : ''}</section>
       <section class="panel practice-console-panel"><div class="panel-heading"><span class="panel-index">02</span><h2>Your output</h2></div>${consoleMarkup('practice-console')}<p class="practice-note">Practice problems do not use input().</p></section></div>
     </main>`;
@@ -217,7 +234,7 @@ function practiceFeedbackMarkup(result) {
 }
 
 function practiceSummaryMarkup(lesson, score, total) {
-  return `<main class="page-wrap narrow-page summary-page"><div class="summary-mark" aria-hidden="true">✓</div><p class="eyebrow">${lesson.id === 7 ? 'Course complete' : 'Practice complete'}</p><h1>${lesson.id === 7 ? 'You finished the course!' : 'You did it.'}</h1><p class="page-lead">You solved ${score} of ${total} ${total === 1 ? 'problem' : 'problems'} in ${escapeHtml(lesson.title)}.</p><a class="button button-primary" href="/" data-nav>Back to lesson list <span aria-hidden="true">→</span></a></main>`;
+  return `<main class="page-wrap narrow-page summary-page"><div class="summary-mark" aria-hidden="true">✓</div><p class="eyebrow">${lesson.id === 7 ? 'Course complete' : 'Practice complete'}</p><h1>${lesson.id === 7 ? 'You finished the course!' : 'You did it.'}</h1><p class="page-lead">You solved ${score} of ${total} ${total === 1 ? 'problem' : 'problems'} in ${escapeHtml(lesson.title)}.</p><a class="button button-primary" href="${appUrl('/')}" data-nav>Back to lesson list <span aria-hidden="true">→</span></a></main>`;
 }
 
 function friendlyError(message) {
@@ -401,7 +418,7 @@ function navigate(path) {
   state.practiceIndex = 0;
   state.hintIndex = 0;
   state.showSolution = false;
-  history.pushState({}, '', path);
+  history.pushState({}, '', appUrl(path));
   render();
   window.scrollTo(0, 0);
 }
@@ -485,7 +502,7 @@ app.addEventListener('click', (event) => {
     localStorage.removeItem(STORAGE_KEY);
     state.progress = defaultProgress();
     document.querySelector('#reset-dialog')?.close();
-    history.replaceState({}, '', '/');
+    history.replaceState({}, '', appUrl('/'));
     render();
   }
   if (action === 'mobile-tab') {

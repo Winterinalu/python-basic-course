@@ -10,7 +10,7 @@ export function createPythonRunner(onEvent) {
   function spawnWorker() {
     status = 'loading';
     onEvent({ type: 'loading' });
-    worker = new Worker('/python-worker.js');
+    worker = new Worker(`${import.meta.env.BASE_URL}python-worker.js`);
     worker.onmessage = ({ data }) => {
       if (data.type === 'ready') {
         status = 'ready';

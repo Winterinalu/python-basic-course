@@ -9,7 +9,10 @@
     <script>
       const route = location.pathname || '/';
       sessionStorage.setItem('python-practice-gh-pages-route', route + location.search + location.hash);
-      location.replace('/');
+      const appBase = route === '/python-basic-course' || route.startsWith('/python-basic-course/')
+        ? '/python-basic-course/'
+        : '/';
+      location.replace(appBase);
     </script>
   </body>
 </html>

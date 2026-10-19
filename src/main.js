@@ -4,9 +4,17 @@ import { createPythonRunner } from './runner.js';
 const app = document.querySelector('#app');
 const STORAGE_KEY = 'python-practice-progress-v1';
 const defaultProgress = () => ({ opened: [], read: [], solved: {}, attempts: {}, failures: {}, inputTried: [] });
+const GITHUB_PAGES_PATH = '/python-basic-course';
+const BASE_PATH = window.location.pathname === GITHUB_PAGES_PATH || window.location.pathname.startsWith(`${GITHUB_PAGES_PATH}/`)
+  ? GITHUB_PAGES_PATH
+  : '';
 
 function appUrl(path = '/') {
-  return path.startsWith('/') ? path : `/${path}`;
+  let route = path.startsWith('/') ? path : `/${path}`;
+  if (BASE_PATH && (route === BASE_PATH || route.startsWith(`${BASE_PATH}/`))) {
+    route = route.slice(BASE_PATH.length) || '/';
+  }
+  return `${BASE_PATH}${route}` || '/';
 }
 
 const pendingRoute = sessionStorage.getItem('python-practice-gh-pages-route');
@@ -44,7 +52,8 @@ function lessonById(id) {
 }
 
 function routeInfo() {
-  const pathname = window.location.pathname;
+  let pathname = window.location.pathname;
+  if (BASE_PATH && pathname.startsWith(BASE_PATH)) pathname = pathname.slice(BASE_PATH.length) || '/';
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/intro') return { page: 'intro' };
   const match = path.match(/^\/lesson\/(\d+)(\/practice)?$/);
@@ -170,15 +179,13 @@ function consoleMarkup(id) {
   const output = hasParts
       ? state.consoleParts.map((part) => `<span class="${part.kind === 'input' ? 'terminal-typed' : ''}">${escapeHtml(part.text)}</span>`).join('')
     : `<span class="console-placeholder">${state.pyStatus === 'loading' ? 'Loading Python...' : state.pyStatus === 'failed' ? "Python couldn't load. Check your internet connection and refresh the page." : 'Your output will appear here.'}</span>`;
-  const isolationNote = !window.crossOriginIsolated ? '<p class="console-notice">Interactive input isn\'t available in this browser. Try a different browser or refresh the page.</p>' : '';
   const error = state.consoleError ? `<div class="console-error"><p>${escapeHtml(state.consoleError.friendly)}</p>${state.consoleError.original ? `<small>${escapeHtml(state.consoleError.original)}</small>` : ''}</div>` : '';
   const input = state.waitingForInput ? '<input id="terminal-input" class="terminal-input" aria-label="Type your Python input and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false"><span class="cursor-blink" aria-hidden="true"></span>' : '';
-  return `<div class="console-shell"><div class="console-topline"><span class="console-label"><i aria-hidden="true"></i> Console</span><button class="console-clear" type="button" data-action="console-clear" aria-label="Clear console">Clear</button></div><div id="${id}" class="console-body" role="log" aria-live="polite" tabindex="0"><div class="console-output">${output}${input}</div>${error}${isolationNote}</div></div>`;
+  return `<div class="console-shell"><div class="console-topline"><span class="console-label"><i aria-hidden="true"></i> Console</span><button class="console-clear" type="button" data-action="console-clear" aria-label="Clear console">Clear</button></div><div id="${id}" class="console-body" role="log" aria-live="polite" tabindex="0"><div class="console-output">${output}${input}</div>${error}</div></div>`;
 }
 
 function lessonMarkup(lesson) {
   readLesson(lesson);
-  const inputUnavailable = !window.crossOriginIsolated;
   const mobileTabs = `<div class="mobile-tabs" role="tablist" aria-label="Lesson panels">${[['lesson', 'Lesson'], ['code', 'Code'], ['console', 'Console']].map(([panel, label]) => `<button type="button" role="tab" aria-selected="${state.mobilePanel === panel}" class="mobile-tab ${state.mobilePanel === panel ? 'is-active' : ''}" data-action="mobile-tab" data-panel="${panel}">${label}</button>`).join('')}</div>`;
   return `<main class="page-wrap lesson-page">
     <a class="back-link" href="${appUrl('/')}" data-nav>← All lessons</a>
@@ -186,7 +193,7 @@ function lessonMarkup(lesson) {
     ${mobileTabs}
     <div class="lesson-panels">
       <section class="panel theory-panel ${state.mobilePanel === 'lesson' ? 'mobile-active' : ''}" data-mobile-panel="lesson" aria-label="Lesson explanation"><div class="panel-heading"><span class="panel-index">01</span><h2>Understand it</h2></div><div class="lesson-sections">${lesson.sections.map((section) => `<section><h3>${escapeHtml(section.heading)}</h3><p>${escapeHtml(section.body)}</p></section>`).join('')}</div><aside class="key-points"><h3>Key points</h3><ul>${lesson.keyPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul></aside><a class="button button-primary full-button" href="${appUrl(`/lesson/${lesson.id}/practice`)}" data-nav>Go to practice <span aria-hidden="true">→</span></a></section>
-      <section class="panel editor-panel ${state.mobilePanel === 'code' ? 'mobile-active' : ''}" data-mobile-panel="code" aria-label="Python code editor"><div class="panel-heading"><span class="panel-index">02</span><h2>Make it yours</h2></div><div class="editor-caption"><span>example.py</span><span>Python 3</span></div>${editorMarkup('lesson-editor', lesson.exampleCode, 'Python code')}<div class="editor-actions"><button class="button button-primary" type="button" data-action="lesson-run" ${state.pyStatus !== 'ready' ? 'disabled' : ''}>Run <span aria-hidden="true">▶</span></button><button class="button button-outline" type="button" data-action="lesson-reset">Reset</button><button class="button button-outline input-button" type="button" data-action="lesson-input" ${inputUnavailable || state.pyStatus !== 'ready' ? 'disabled' : ''}>Try with input</button></div><p class="editor-note">${escapeHtml(lesson.inputDemoNote)}</p></section>
+      <section class="panel editor-panel ${state.mobilePanel === 'code' ? 'mobile-active' : ''}" data-mobile-panel="code" aria-label="Python code editor"><div class="panel-heading"><span class="panel-index">02</span><h2>Make it yours</h2></div><div class="editor-caption"><span>example.py</span><span>Python 3</span></div>${editorMarkup('lesson-editor', lesson.exampleCode, 'Python code')}<div class="editor-actions"><button class="button button-primary" type="button" data-action="lesson-run" ${state.pyStatus !== 'ready' ? 'disabled' : ''}>Run <span aria-hidden="true">▶</span></button><button class="button button-outline" type="button" data-action="lesson-reset">Reset</button><button class="button button-outline input-button" type="button" data-action="lesson-input" ${state.pyStatus !== 'ready' ? 'disabled' : ''}>Try with input</button></div><p class="editor-note">${escapeHtml(lesson.inputDemoNote)}</p></section>
       <section class="panel console-panel ${state.mobilePanel === 'console' ? 'mobile-active' : ''}" data-mobile-panel="console" aria-label="Python console"><div class="panel-heading"><span class="panel-index">03</span><h2>See what happens</h2></div>${consoleMarkup('lesson-console')}</section>
     </div>
     <nav class="lesson-nav" aria-label="Lesson navigation">${lesson.id > 1 ? `<a class="button button-outline" href="${appUrl(`/lesson/${lesson.id - 1}`)}" data-nav>← Previous lesson</a>` : '<span></span>'}${lesson.id < 7 ? `<a class="button button-outline" href="${appUrl(`/lesson/${lesson.id + 1}`)}" data-nav>Next lesson →</a>` : `<a class="button button-primary" href="${appUrl('/lesson/7/practice')}" data-nav>Final challenge →</a>`}</nav>
@@ -276,7 +283,7 @@ function updateRunnerControls() {
     button.disabled = state.pyStatus !== 'ready' || pythonRunner.running;
   });
   document.querySelectorAll('[data-action="lesson-input"]').forEach((button) => {
-    button.disabled = !window.crossOriginIsolated || state.pyStatus !== 'ready' || pythonRunner.running;
+    button.disabled = state.pyStatus !== 'ready' || pythonRunner.running;
   });
 }
 
@@ -367,6 +374,7 @@ function handleRunnerEvent(event) {
   }
   if (event.type === 'output') appendConsole(event.text, 'text');
   if (event.type === 'input-request') {
+    if (event.prompt) state.consoleParts.push({ text: event.prompt, kind: 'text' });
     state.waitingForInput = true;
     renderConsole();
   }
@@ -425,11 +433,6 @@ function editorValue(id) {
 function runLessonCode(code, interactive = true) {
   clearConsole();
   state.waitingForInput = false;
-  if (interactive && !window.crossOriginIsolated && /\binput\s*\(/.test(code)) {
-    state.consoleError = { friendly: "Interactive input isn't available in this browser. Try a different browser or refresh the page.", original: '' };
-    renderConsole();
-    return;
-  }
   pythonRunner.run(code, { interactive });
   updateRunnerControls();
 }

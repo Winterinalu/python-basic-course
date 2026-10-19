@@ -31,8 +31,8 @@ input() must behave like a terminal prompt, not a custom form:
 - When the program calls input("prompt"), the console prints the prompt text on its own line, then shows a single blinking text cursor on the same line, like a terminal.
 - The learner types the answer directly into the console and presses Enter. The typed text stays in the console history, and the program continues from that exact value.
 - input() always returns a string, exactly as in real Python. Lessons convert with int() when they need numbers.
-- Implementation: the worker and the main thread share a SharedArrayBuffer and use Atomics.wait in the worker to block until the answer arrives. The main thread writes the answer and calls Atomics.notify. Set the Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp headers in Vercel and the local static server, and add a check that window.crossOriginIsolated is true.
-- If window.crossOriginIsolated is false, the console shows: "Interactive input isn't available in this browser. Try a different browser or refresh the page." The "Try with input" button is disabled in that case. All other features still work.
+- When SharedArrayBuffer is available, the worker and the main thread may share one and use Atomics.wait/Atomics.notify for synchronous input. Otherwise, the worker transforms top-level input() calls into awaited input requests and pauses asynchronously until the console answer arrives.
+- Interactive input works on static hosts that do not provide Cross-Origin-Opener-Policy or Cross-Origin-Embedder-Policy headers.
 - If the learner closes the lesson or resets while input is waiting, terminate the worker cleanly.
 - Ctrl/Cmd+C in the console stops a running program (same as the timeout behavior: terminate the worker and restart it).
 

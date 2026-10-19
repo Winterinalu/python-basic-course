@@ -10,7 +10,7 @@ export function createPythonRunner(onEvent) {
   function spawnWorker() {
     status = 'loading';
     onEvent({ type: 'loading' });
-    worker = new Worker('/python-worker.js');
+    worker = new Worker(new URL('../python-worker.js', import.meta.url));
     worker.onmessage = ({ data }) => {
       if (data.type === 'ready') {
         status = 'ready';
@@ -26,7 +26,7 @@ export function createPythonRunner(onEvent) {
       if (data.type === 'output') onEvent({ ...data, requestId: active.id });
       if (data.type === 'input-request') {
         pauseTimer();
-        onEvent({ type: 'input-request', requestId: active.id });
+        onEvent({ ...data, requestId: active.id });
       }
       if (data.type === 'done' || data.type === 'error') finish(data);
     };
@@ -72,20 +72,24 @@ export function createPythonRunner(onEvent) {
     if (interactive && window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined') {
       inputBuffer = new SharedArrayBuffer(8 + INPUT_CAPACITY);
     }
-    active = { id, inputBuffer, timer: null, deadline: 0, remaining: RUN_LIMIT };
+    active = { id, inputBuffer, interactive, timer: null, deadline: 0, remaining: RUN_LIMIT };
     startTimer();
-    worker.postMessage({ type: 'run', code, inputBuffer });
+    worker.postMessage({ type: 'run', code, inputBuffer, interactive });
     return id;
   }
 
   function submitInput(value) {
-    if (!active?.inputBuffer) return;
-    const encoded = new TextEncoder().encode(value).slice(0, INPUT_CAPACITY - 1);
-    const control = new Int32Array(active.inputBuffer, 0, 2);
-    new Uint8Array(active.inputBuffer, 8, encoded.length).set(encoded);
-    control[1] = encoded.length;
-    Atomics.store(control, 0, 1);
-    Atomics.notify(control, 0);
+    if (!active?.interactive) return;
+    if (active.inputBuffer) {
+      const encoded = new TextEncoder().encode(value).slice(0, INPUT_CAPACITY - 1);
+      const control = new Int32Array(active.inputBuffer, 0, 2);
+      new Uint8Array(active.inputBuffer, 8, encoded.length).set(encoded);
+      control[1] = encoded.length;
+      Atomics.store(control, 0, 1);
+      Atomics.notify(control, 0);
+    } else {
+      worker.postMessage({ type: 'submit-input', value });
+    }
     startTimer(active.remaining);
   }
 

@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f7faf9" />
     <title>Python Practice | Learn by doing</title>
-    <link rel="stylesheet" href="/assets/tailwind.css" />
-    <link rel="stylesheet" href="/src/styles.css" />
-    <script type="module" src="/src/main.js"></script>
+    <script>
+      const appBase = location.pathname === '/python-basic-course' || location.pathname.startsWith('/python-basic-course/')
+        ? '/python-basic-course/'
+        : '/';
+      document.write(`<base href="${appBase}">`);
+    </script>
+    <link rel="stylesheet" href="assets/tailwind.css" />
+    <link rel="stylesheet" href="src/styles.css" />
+    <script type="module" src="src/main.js"></script>
   </head>
   <body>
     <div id="app" class="min-h-screen"></div>
